@@ -247,6 +247,7 @@ public class MediaActivity extends Activity {
         private void itemClicked(final ResourceBean resourceBean){
             if(resourceBean.getType().equals("dir")){
                 curPath = curPath + resourceBean.getName() + "/";
+                resourceBean.setPath(curPath);
                 listLoad(resourceBean);
                 return;
             }
