@@ -1,11 +1,8 @@
-package com.example.zhang.remoteos;
+package com.example.zhang.remoteos.beans;
 
 import android.content.Context;
-import android.content.Intent;
 
-import static android.support.v4.content.ContextCompat.startActivity;
-
-class AppBean {
+public class AppBean {
     int icon;
     String name;
     Class cls;

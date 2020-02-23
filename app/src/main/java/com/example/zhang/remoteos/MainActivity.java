@@ -1,7 +1,6 @@
 package com.example.zhang.remoteos;
 
 import android.content.Intent;
-import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -9,6 +8,9 @@ import android.view.View;
 import android.widget.GridView;
 
 //import com.example.zhang.remoteos.apps.media.PlayerActivity;
+
+import com.example.zhang.remoteos.adapters.IconAdapter;
+import com.example.zhang.remoteos.beans.AppBean;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         mdatas = new ArrayList<>();
         initView();
         mAdapter = new IconAdapter(this, mdatas);
@@ -37,8 +40,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(View view, int position) {
                 AppBean ab = mdatas.get(position);
-                Log.d("click", ab.name);
-                Intent intent = new Intent(MainActivity.this, ab.cls);
+                Log.d("click", ab.getName());
+                Intent intent = new Intent(MainActivity.this, ab.getCls());
                 startActivity(intent);
             }
         });

@@ -1,4 +1,4 @@
-package com.example.zhang.remoteos.utils;
+package com.example.zhang.remoteos.beans;
 
 import java.util.List;
 

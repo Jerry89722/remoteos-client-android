@@ -1,31 +1,16 @@
-package com.example.zhang.remoteos.utils;
+package com.example.zhang.remoteos.beans;
 
 import android.util.Log;
 
-public class PlayStatusBean {
+import com.example.zhang.remoteos.utils.ROSUtils;
+
+public class MediaStatusBean {
     private String uuid;
     private String status;
     private String name;
     private String total_time;
     private String cur_time;
-
-    public PlayStatusBean() {
-    }
-
-    public PlayStatusBean(String uuid, String status, String total_time, String cur_time) {
-        this.uuid = uuid;
-        this.status = status;
-        this.total_time = total_time;
-        this.cur_time = cur_time;
-    }
-
-    public PlayStatusBean(String uuid, String status, String name, String total_time, String cur_time) {
-        this.uuid = uuid;
-        this.status = status;
-        this.name = name;
-        this.total_time = total_time;
-        this.cur_time = cur_time;
-    }
+    private String volume;
 
     public long getTimeAsSec(boolean isTotal) {
         if(isTotal)
@@ -44,6 +29,14 @@ public class PlayStatusBean {
 
     public String getCur_time() {
         return ROSUtils.secToTime(Integer.valueOf(cur_time).longValue());
+    }
+
+    public String getVolume() {
+        return volume;
+    }
+
+    public void setVolume(String volume) {
+        this.volume = volume;
     }
 
     public void setCur_time(String cur_time) {

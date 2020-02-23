@@ -9,12 +9,12 @@
         android:id="@+id/title_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
-            <com.hjq.bar.TitleBar
-                android:id="@+id/section_label"
-                android:layout_width="wrap_content"
-                android:layout_height="30dp"
-                app:backButton="false"
-                app:title="标题栏" />
+        <com.hjq.bar.TitleBar
+            android:id="@+id/section_label"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            app:backButton="false"
+            app:title="标题栏" />
     </LinearLayout>
 
     <RelativeLayout
@@ -77,22 +77,53 @@
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true" />
         <ImageView
-            android:id="@+id/iv_last"
-            android:src="@mipmap/icon_last"
+            android:id="@+id/iv_stop"
+            android:src="@mipmap/icon_stop"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_toStartOf="@id/iv_play"
             android:layout_alignTop="@id/iv_play"
-            android:layout_marginEnd="20dp"/>
+            android:layout_marginEnd="16dp"/>
+        <ImageView
+            android:id="@+id/iv_last"
+            android:src="@mipmap/icon_last"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toStartOf="@id/iv_stop"
+            android:layout_alignTop="@id/iv_play"
+            android:layout_marginEnd="16dp"/>
+        <ImageView
+            android:id="@+id/vol_low"
+            android:src="@mipmap/vol_low"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toStartOf="@id/iv_last"
+            android:layout_alignTop="@id/iv_play"
+            android:layout_marginEnd="16dp"/>
+        <ImageView
+            android:id="@+id/iv_mute"
+            android:src="@mipmap/vol_mute"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/iv_play"
+            android:layout_alignTop="@id/iv_play"
+            android:layout_marginStart="16dp"/>
         <ImageView
             android:id="@+id/iv_next"
             android:src="@mipmap/icon_next"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_toEndOf="@id/iv_play"
+            android:layout_toEndOf="@id/iv_mute"
             android:layout_alignTop="@id/iv_play"
-
-            android:layout_marginStart="20dp"/>
+            android:layout_marginStart="16dp"/>
+        <ImageView
+            android:id="@+id/vol_high"
+            android:src="@mipmap/vol_high"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/iv_next"
+            android:layout_alignTop="@id/iv_play"
+            android:layout_marginStart="16dp"/>
     </RelativeLayout>
 
     <android.support.v7.widget.RecyclerView

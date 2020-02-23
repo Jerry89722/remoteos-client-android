@@ -1,4 +1,4 @@
-package com.example.zhang.remoteos.utils;
+package com.example.zhang.remoteos.beans;
 
 import android.util.Log;
 
@@ -9,7 +9,7 @@ import java.util.UUID;
 public class TaskBean {
     private String uuid;
     private PlayActionEnum actionEnum;
-    private int progress;
+    private int value;
     private ResourceBean resource;
 
     private String action;
@@ -25,11 +25,11 @@ public class TaskBean {
         this.action = action_get();
     }
 
-    public TaskBean(PlayActionEnum action, ResourceBean resourceBean, int progress) {
+    public TaskBean(PlayActionEnum action, ResourceBean resourceBean, int value) {
         String uuid = UUID.randomUUID().toString();
         this.uuid = uuid.replaceAll("-", "");
         this.actionEnum = action;
-        this.progress = progress;
+        this.value = value;
         this.resource = resourceBean;
         this.action = action_get();
     }
@@ -51,6 +51,14 @@ public class TaskBean {
             case statusCheck:
                 act = "status";
                 break;
+            case playStop:
+                act = "stop";
+                break;
+            case volMute:
+            case volHigh:
+            case volLow:
+                act = "volume";
+                break;
         }
         return act;
     }
@@ -65,10 +73,16 @@ public class TaskBean {
                 paramStr = paramStr + resource.toString(actionEnum);
                 break;
             case playSeek:
-                paramStr = paramStr + "&progress=" + progress;
+                paramStr = paramStr + "&progress=" + value;
+                break;
+            case volHigh:
+            case volLow:
+            case volMute:
+                paramStr = paramStr + "&volume=" + value;
                 break;
             case playCur:
             case statusCheck:
+            case playStop:
                 break;
         }
         Log.e("param string", paramStr);

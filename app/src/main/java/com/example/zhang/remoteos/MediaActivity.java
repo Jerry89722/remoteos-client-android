@@ -5,6 +5,7 @@ import android.app.Activity;
 
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -26,22 +27,23 @@ import android.widget.TextView;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.example.zhang.remoteos.apps.media.PlayActionEnum;
-import com.example.zhang.remoteos.utils.FileAdapter;
-import com.example.zhang.remoteos.utils.ResourceBean;
-import com.example.zhang.remoteos.utils.ResourceListBean;
-import com.example.zhang.remoteos.utils.GetData;
-import com.example.zhang.remoteos.utils.PlayStatusBean;
+import com.example.zhang.remoteos.adapters.FileAdapter;
+import com.example.zhang.remoteos.beans.MediaStatusBean;
+import com.example.zhang.remoteos.beans.ResourceBean;
+import com.example.zhang.remoteos.beans.ResourceListBean;
 import com.example.zhang.remoteos.utils.ROSUtils;
-import com.example.zhang.remoteos.utils.TaskBean;
+import com.example.zhang.remoteos.beans.TaskBean;
+import com.example.zhang.remoteos.utils.okhttputils.CallBackUtil;
+import com.example.zhang.remoteos.utils.okhttputils.OkhttpUtil;
 import com.hjq.bar.TitleBar;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import okhttp3.internal.concurrent.Task;
-
+import okhttp3.Call;
 
 public class MediaActivity extends Activity {
 
@@ -59,11 +61,14 @@ public class MediaActivity extends Activity {
      * The {@link ViewPager} that will host the section contents.
      */
     private ViewPager mViewPager;
+//    private String session;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_media);
+        Intent intent = getIntent();
+//        session = intent.getStringExtra("session");
         // Create the adapter that will return a fragment for each of the three
         // primary sections of the activity.
         mSectionsPagerAdapter = new SectionsPagerAdapter(getFragmentManager());
@@ -93,6 +98,19 @@ public class MediaActivity extends Activity {
                 Log.e("final page", String.valueOf(mViewPager.getCurrentItem()));
             }
         });
+    }
+
+    @Override
+    public void onBackPressed(){
+        Log.e("clicked", "back pressed "+ mViewPager.getCurrentItem());
+        PlaceholderFragment frgmt = mSectionsPagerAdapter.getFrgmt(mViewPager.getCurrentItem()); // getFragmentManager().findFragmentById(mViewPager.getCurrentItem());
+        if(frgmt == null){
+            Log.e("fragment is null", "is null");
+        }
+        if(frgmt.lastPage()) {
+            return;
+        }
+        super.onBackPressed();
     }
 
     @Override
@@ -128,15 +146,13 @@ public class MediaActivity extends Activity {
 
 
         TextView name_tv, cur_time_tv, total_time_tv;
-        ImageView next_iv, last_iv, play_iv, touch_line_iv;
+        ImageView next_iv, last_iv, play_iv, stop_iv, mute_iv, low_iv, high_iv, touch_line_iv;
         SeekBar seekBar;
         RecyclerView list_rv;
         List<ResourceBean> mResources;
         String curPath = "/";
 
         ResourceBean playingResourceBean;
-
-        private String detail = "";
 
         private FileAdapter adapter;
 
@@ -191,7 +207,25 @@ public class MediaActivity extends Activity {
             return rootView;
         }
 
+        public boolean lastPage(){
+            Log.e("current path", curPath);
 
+            if(curPath.equals("/")) {
+                return false;
+            }else {
+
+                if(curPath.charAt(curPath.length() - 1) == '/') {
+                    curPath = curPath.substring(0, curPath.lastIndexOf('/', curPath.length()-2)+1);
+                }else{
+                    curPath = curPath.substring(0, curPath.lastIndexOf('/') + 1);
+                }
+                Log.e("current path2", curPath);
+
+                ResourceBean resourceBean = new ResourceBean("video/music", curPath);
+                listLoad(resourceBean);
+                return true;
+            }
+        }
 
         private void setEventListener() {
             /* 设置每一项的点击事件*/
@@ -208,99 +242,105 @@ public class MediaActivity extends Activity {
 
         private void listLoad(final ResourceBean resourceBean) {
 
-            new Thread() {
-                public void run() {
-                    TaskBean task = new TaskBean(PlayActionEnum.list, resourceBean);
-                    String url = task.toString();
+            TaskBean task = new TaskBean(PlayActionEnum.list, resourceBean);
+            String url = task.toString();
+            try {
+                url = new String(url.getBytes("ISO-8859-1"),"UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
 
-                    Log.e("list load html request", url);
-                    try {
-                        url = new String(url.getBytes("ISO-8859-1"),"UTF-8");
-                        detail = GetData.getHtml("/explorer" + url);
-                        Log.d("detail html", detail);
-                    } catch (Exception e) {
-                        Log.e("detail html", "get failed");
-                        e.printStackTrace();
-                    }
+            String base_url = getResources().getString(R.string.base_url);
+            url = String.format(base_url, "toshiba", "explorer" + url);
 
-                    Handler handler = new Handler(Looper.getMainLooper()){
-                        @Override
-                        public void handleMessage(Message msg){ // 会在主线程被通知(sendEmptyMessage)后执行
-                            mResources.clear();
-                            JSONObject jsonObject = JSON.parseObject(detail);
-                            ResourceListBean resourceListBean = JSON.toJavaObject(jsonObject, ResourceListBean.class);
+            // public static void okHttpGet(String url, Map<String, String> paramsMap, Map<String, String> headerMap, CallBackUtil callBack)
+            OkhttpUtil.okHttpGet(url, null, null, new CallBackUtil.CallBackString() {
+                @Override
+                public void onFailure(Call call, Exception e) {}
+
+                @Override
+                public void onResponse(String response) {
+                    //                                Toast.makeText(MediaActivity.this, "Success", Toast.LENGTH_SHORT).show();
+                    Log.d("list load response", response);
+                    mResources.clear();
+                    JSONObject jsonObject = JSON.parseObject(response);
+                    ResourceListBean resourceListBean = JSON.toJavaObject(jsonObject, ResourceListBean.class);
 //                        String uuid = fileListBean.getUuid();
-                            List<ResourceBean> resourceList = resourceListBean.getList();
-                            for(int i = 0; i < resourceList.size(); ++i){
-                                ResourceBean resourceBean = resourceList.get(i);
-                                resourceBean.setId(i + 1);
-                                mResources.add(resourceBean);
-                            }
-                            adapter.notifyDataSetChanged();
+                    List<ResourceBean> resourceList = resourceListBean.getList();
+                    for(int i = 0; i < resourceList.size(); ++i){
+                        ResourceBean resourceBean = resourceList.get(i);
+                        if(!resourceBean.getType().equals("tv")){
+                            resourceBean.setId(i + 1);
                         }
-                    };
-                    handler.sendEmptyMessage(0);
+                        mResources.add(resourceBean);
+                    }
+                    adapter.notifyDataSetChanged();
                 }
-            }.start();
+            });
+
         }
 
         private void itemClicked(final ResourceBean resourceBean){
             if(resourceBean.getType().equals("dir")){
                 curPath = curPath + resourceBean.getName() + "/";
+                Log.e("next current path", curPath);
                 resourceBean.setPath(curPath);
                 listLoad(resourceBean);
-                return;
-            }
-            playingResourceBean = resourceBean;
-            if(getArguments().getInt(PlaceholderFragment.ARG_SECTION_NUMBER) == 1){
-                mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playTv, -1);
             }else{
-                mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playNew, -1);
+                resourceBean.setPath(curPath + resourceBean.getName());
+                playingResourceBean = resourceBean;
+                if(getArguments().getInt(PlaceholderFragment.ARG_SECTION_NUMBER) == 1){
+                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playTv, 0);
+                }else{
+                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playNew, 0);
+                }
             }
         }
 
         private void mediaPlayerCtrl(final ResourceBean resourceBean, final PlayActionEnum action, final int arg){
-            new Thread() {
-                public void run() {
-                    try {
-                        TaskBean task = new TaskBean(action, resourceBean, arg);
-                        String url = task.toString();
+            TaskBean task = new TaskBean(action, resourceBean, arg);
+            String url = task.toString();
+            try {
+                url = new String(url.getBytes("ISO-8859-1"),"UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+            String base_url = getResources().getString(R.string.base_url);
+            url = String.format(base_url, "toshiba", "media" + url);
 
-                        url = new String(url.getBytes("ISO-8859-1"),"UTF-8");
-                        detail = GetData.getHtml("/media" + url);
-                        Log.e("media response", detail);
-                    } catch (Exception e) {
-                        Log.e("play html", "get failed");
-                        e.printStackTrace();
-                    }
+            Log.e("media player url", url);
 
-                    Handler handler = new Handler(Looper.getMainLooper()) {
-                        @Override
-                        public void handleMessage(Message msg) {
-                            JSONObject jsonObject = JSON.parseObject(detail);
-                            PlayStatusBean playStatusBean = JSON.toJavaObject(jsonObject, PlayStatusBean.class);
+//          public static void okHttpGet(String url, Map<String, String> paramsMap, Map<String, String> headerMap, CallBackUtil callBack)
+            OkhttpUtil.okHttpGet(url, null, null, new CallBackUtil.CallBackString() {
+                @Override
+                public void onFailure(Call call, Exception e) {}
 
-                            playerBoarderUpdate(playStatusBean);
+                @Override
+                public void onResponse(String response) {
+//                  Toast.makeText(MediaActivity.this, "Success", Toast.LENGTH_SHORT).show();
+                    Log.d("media player response", response);
+                    JSONObject jsonObject = JSON.parseObject(response);
+                    MediaStatusBean playStatusBean = JSON.toJavaObject(jsonObject, MediaStatusBean.class);
 
-                            String name = resourceBean.getName();
-                            name_tv.setText(name);
-                            switch (playStatusBean.getStatus()) {
-                                case "playing":
-                                    play_iv.setImageResource(R.mipmap.icon_pause);
-                                    break;
-                                case "pause":
-                                    play_iv.setImageResource(R.mipmap.icon_play);
-                                    break;
-                            }
+                    playerBoarderUpdate(playStatusBean);
+                    if(resourceBean != null) {
+                        String name = resourceBean.getName();
+                        name_tv.setText(name);
+                        switch (playStatusBean.getStatus()) {
+                            case "playing":
+                                play_iv.setImageResource(R.mipmap.icon_pause);
+                                break;
+                            case "pause":
+                            case "stop":
+                                play_iv.setImageResource(R.mipmap.icon_play);
+                                break;
                         }
-                    };
-                    handler.sendEmptyMessage(0);
+                    }
                 }
-
-            }.start();
+            });
         }
 
-        private void playerBoarderUpdate(PlayStatusBean playStatusBean) {
+        private void playerBoarderUpdate(MediaStatusBean playStatusBean) {
 
             Log.e("cur_time", playStatusBean.getCur_time());
             Log.e("total_time", playStatusBean.getTotal_time());
@@ -321,29 +361,62 @@ public class MediaActivity extends Activity {
             touch_line_iv = view.findViewById(R.id.iv_touch_line);
             seekBar = view.findViewById(R.id.seek_bar);
             list_rv = view.findViewById(R.id.rv);
+            stop_iv = view.findViewById(R.id.iv_stop);
+            mute_iv = view.findViewById(R.id.iv_mute);
+            low_iv = view.findViewById(R.id.vol_low);
+            high_iv = view.findViewById(R.id.vol_high);
+
+            seekBar.setEnabled(false);
 
 //            next_iv.setOnClickListener((View.OnClickListener) view);
 //            last_iv.setOnClickListener(this);
+
+            stop_iv.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playStop, 0);
+                }
+            });
+
+            mute_iv.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.volMute, 0);
+                }
+            });
+
+            low_iv.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.volLow, -8);
+                }
+            });
+
+            high_iv.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.volHigh, 8);
+                }
+            });
+
             play_iv.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     Log.e("click", "enable seek_bar ......");
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playCur, -1);
+                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playCur, 0);
                 }
             });
             touch_line_iv.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     Log.e("click", "enable seek_bar ......");
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.statusCheck, -1);
+                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.statusCheck, 0);
                     seekBar.setEnabled(true);
                     timerTaskStart();
                 }
             });
-            seekBar.setEnabled(false);
 
             timer = new Timer();
-
             seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 int progress;
                 @Override
@@ -413,9 +486,10 @@ public class MediaActivity extends Activity {
      * one of the sections/tabs/pages.
      ***************************************************************************/
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
-
+        List<PlaceholderFragment> fragments;
         public SectionsPagerAdapter(FragmentManager fm) {
             super(fm);
+            fragments = new ArrayList<>();
         }
 
         @Override
@@ -423,7 +497,13 @@ public class MediaActivity extends Activity {
             // getItem is called to instantiate the fragment for the given page.
             // Return a PlaceholderFragment (defined as a static inner class below).
             Log.e("getItem", String.valueOf(position));
-            return PlaceholderFragment.newInstance(position + 1);
+            Fragment fragment = PlaceholderFragment.newInstance(position + 1);
+            fragments.add((PlaceholderFragment) fragment);
+            return fragment;
+        }
+
+        public PlaceholderFragment getFrgmt(int position) {
+            return fragments.get(position);
         }
 
         @Override

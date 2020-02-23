@@ -1,9 +1,8 @@
-package com.example.zhang.remoteos.utils;
+package com.example.zhang.remoteos.adapters;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +10,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.zhang.remoteos.R;
+import com.example.zhang.remoteos.beans.ResourceBean;
 
 import java.util.List;
 
@@ -61,6 +61,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder
                 break;
             case "tv":
                 resourceViewHolder.iconIv.setImageResource(R.mipmap.icon_tv);
+                break;
             default:
                 resourceViewHolder.iconIv.setImageResource(R.mipmap.ic_launcher);
                 break;

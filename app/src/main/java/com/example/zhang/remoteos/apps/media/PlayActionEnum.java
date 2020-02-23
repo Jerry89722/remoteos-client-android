@@ -6,5 +6,9 @@ public enum PlayActionEnum{
     statusCheck,
     playTv,
     playSeek,
+    playStop,
+    volMute,
+    volHigh,
+    volLow,
     list
 }

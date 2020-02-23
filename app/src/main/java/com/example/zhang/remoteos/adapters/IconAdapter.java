@@ -1,4 +1,4 @@
-package com.example.zhang.remoteos;
+package com.example.zhang.remoteos.adapters;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -7,6 +7,9 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.example.zhang.remoteos.R;
+import com.example.zhang.remoteos.beans.AppBean;
 
 import java.util.List;
 
@@ -52,7 +55,7 @@ public class IconAdapter extends BaseAdapter{
         AppBean ib = mdatas.get(i);
 
         viewHolder.iv.setImageResource(R.mipmap.ic_launcher);
-        viewHolder.tv.setText(ib.name);
+        viewHolder.tv.setText(ib.getName());
         viewHolder.iv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

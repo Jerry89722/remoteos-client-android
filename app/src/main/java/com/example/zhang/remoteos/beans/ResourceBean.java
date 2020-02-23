@@ -1,4 +1,4 @@
-package com.example.zhang.remoteos.utils;
+package com.example.zhang.remoteos.beans;
 
 import com.example.zhang.remoteos.apps.media.PlayActionEnum;
 
@@ -93,8 +93,17 @@ public class ResourceBean {
                 break;
             case playTv:
                 paramStr = "&id=" + id;
-            case playCur:
+                break;
             case playNew:
+                encode_path = new String("");
+                try {
+                    encode_path = URLEncoder.encode(path, "UTF-8");
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+                paramStr = "&path=" + encode_path;
+                break;
+            case playCur:
             case playSeek:
             case statusCheck:
                 break;
