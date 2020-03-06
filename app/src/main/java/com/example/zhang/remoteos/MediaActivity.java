@@ -182,6 +182,7 @@ public class MediaActivity extends Activity {
             TitleBar titleBar = rootView.findViewById(R.id.section_label);
 
             mResources = new ArrayList<>();
+            playingResourceBean = new ResourceBean();
 
             initView(rootView);
             adapter = new FileAdapter(this.getActivity(), mResources);
@@ -192,12 +193,13 @@ public class MediaActivity extends Activity {
             ResourceBean resourceBean;
             if (getArguments().getInt(ARG_SECTION_NUMBER) == 1){
                 title = "电视";
-                resourceBean = new ResourceBean("tv", "internet");
+                resourceBean = new ResourceBean("tv");
 
             }else{
                 title = "本地媒体";
                 resourceBean = new ResourceBean("video/music", curPath);
             }
+            playingMediaRestore();
 
             listLoad(resourceBean);
 
@@ -205,6 +207,10 @@ public class MediaActivity extends Activity {
 
             setEventListener();
             return rootView;
+        }
+
+        private void playingMediaRestore() {
+            mediaPlayerCtrl(playingResourceBean, PlayActionEnum.statusCheck, 0);
         }
 
         public boolean lastPage(){
@@ -249,10 +255,10 @@ public class MediaActivity extends Activity {
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
+            String address = addressGet(resourceBean);
 
-            String base_url = getResources().getString(R.string.base_url);
-            url = String.format(base_url, "toshiba", "explorer" + url);
-
+            url = address + url;
+            Log.e("list load url: ", url);
             // public static void okHttpGet(String url, Map<String, String> paramsMap, Map<String, String> headerMap, CallBackUtil callBack)
             OkhttpUtil.okHttpGet(url, null, null, new CallBackUtil.CallBackString() {
                 @Override
@@ -260,7 +266,7 @@ public class MediaActivity extends Activity {
 
                 @Override
                 public void onResponse(String response) {
-                    //                                Toast.makeText(MediaActivity.this, "Success", Toast.LENGTH_SHORT).show();
+                    // Toast.makeText(MediaActivity.this, "Success", Toast.LENGTH_SHORT).show();
                     Log.d("list load response", response);
                     mResources.clear();
                     JSONObject jsonObject = JSON.parseObject(response);
@@ -277,22 +283,37 @@ public class MediaActivity extends Activity {
                     adapter.notifyDataSetChanged();
                 }
             });
+        }
 
+        private String addressGet(ResourceBean resourceBean) {
+            String base_url = getResources().getString(R.string.base_url);
+            String atype;
+
+            if(resourceBean.getType().equals("tv")){
+                atype = "tv";
+            }else if(resourceBean.getType().contains("video") ||
+                    resourceBean.getType().contains("music") ||
+                    resourceBean.getType().contains("dir")){
+                atype = "files";
+            }else{
+                atype = "internet";
+            }
+            return String.format(base_url, "toshiba", "explorer/" + atype);
         }
 
         private void itemClicked(final ResourceBean resourceBean){
             if(resourceBean.getType().equals("dir")){
                 curPath = curPath + resourceBean.getName() + "/";
                 Log.e("next current path", curPath);
-                resourceBean.setPath(curPath);
+                resourceBean.setFingerprint(curPath);
                 listLoad(resourceBean);
             }else{
-                resourceBean.setPath(curPath + resourceBean.getName());
                 playingResourceBean = resourceBean;
                 if(getArguments().getInt(PlaceholderFragment.ARG_SECTION_NUMBER) == 1){
+//                    playingResourceBean.setFingerprint(curPath + resourceBean.getName());
                     mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playTv, 0);
                 }else{
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playNew, 0);
+                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playLocal, 0);
                 }
             }
         }
@@ -318,23 +339,20 @@ public class MediaActivity extends Activity {
                 @Override
                 public void onResponse(String response) {
 //                  Toast.makeText(MediaActivity.this, "Success", Toast.LENGTH_SHORT).show();
-                    Log.d("media player response", response);
+                    Log.e("media player response", response);
                     JSONObject jsonObject = JSON.parseObject(response);
                     MediaStatusBean playStatusBean = JSON.toJavaObject(jsonObject, MediaStatusBean.class);
 
                     playerBoarderUpdate(playStatusBean);
-                    if(resourceBean != null) {
-                        String name = resourceBean.getName();
-                        name_tv.setText(name);
-                        switch (playStatusBean.getStatus()) {
-                            case "playing":
-                                play_iv.setImageResource(R.mipmap.icon_pause);
-                                break;
-                            case "pause":
-                            case "stop":
-                                play_iv.setImageResource(R.mipmap.icon_play);
-                                break;
-                        }
+
+                    switch (playStatusBean.getStatus()) {
+                        case "playing":
+                            play_iv.setImageResource(R.mipmap.icon_pause);
+                            break;
+                        case "pause":
+                        case "stop":
+                            play_iv.setImageResource(R.mipmap.icon_play);
+                            break;
                     }
                 }
             });
@@ -342,13 +360,19 @@ public class MediaActivity extends Activity {
 
         private void playerBoarderUpdate(MediaStatusBean playStatusBean) {
 
-            Log.e("cur_time", playStatusBean.getCur_time());
-            Log.e("total_time", playStatusBean.getTotal_time());
+            Log.e("cur_time", "|" + playStatusBean.getCur_time());
+            Log.e("total_time", "|" + playStatusBean.getTotal_time());
             cur_time_tv.setText(playStatusBean.getCur_time());
             total_time_tv.setText(playStatusBean.getTotal_time());
 
             seekBar.setMax((int) playStatusBean.getTimeAsSec(true));
             seekBar.setProgress((int)playStatusBean.getTimeAsSec(false));
+
+            if(playStatusBean.getName().length() > 0){
+                String name = playStatusBean.getName();
+                name_tv.setText(name);
+                playingResourceBean.setName(name);
+            }
         }
 
         private void initView(View view) {

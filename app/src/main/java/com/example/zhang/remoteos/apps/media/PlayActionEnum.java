@@ -1,7 +1,7 @@
 package com.example.zhang.remoteos.apps.media;
 
 public enum PlayActionEnum{
-    playNew,
+    playLocal,
     playCur,
     statusCheck,
     playTv,

@@ -51,9 +51,7 @@ public class MediaStatusBean {
         this.uuid = uuid;
     }
 
-
     public String getStatus() {
-//        this.total_time = "12345";
         return status;
     }
 

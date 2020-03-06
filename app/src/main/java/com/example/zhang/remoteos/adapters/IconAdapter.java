@@ -54,7 +54,7 @@ public class IconAdapter extends BaseAdapter{
 
         AppBean ib = mdatas.get(i);
 
-        viewHolder.iv.setImageResource(R.mipmap.ic_launcher);
+        viewHolder.iv.setImageResource(R.mipmap.ic_launcher_round);
         viewHolder.tv.setText(ib.getName());
         viewHolder.iv.setOnClickListener(new View.OnClickListener() {
             @Override

@@ -42,7 +42,7 @@ public class TaskBean {
                 break;
             case playTv:
             case playCur:
-            case playNew:
+            case playLocal:
                 act = "play";
                 break;
             case playSeek:
@@ -69,7 +69,7 @@ public class TaskBean {
         switch (actionEnum){
             case list:
             case playTv:
-            case playNew:
+            case playLocal:
                 paramStr = paramStr + resource.toString(actionEnum);
                 break;
             case playSeek:

@@ -7,26 +7,31 @@ import java.net.URLEncoder;
 
 public class ResourceBean {
     private String name;
-    private String path;
+    private String fingerprint;
     private String type;
-    private int id;
     private String size;
+
+    private int id;
 
     public ResourceBean(){
 
     }
 
-    public ResourceBean(String type, String path) {
-        this.path = path;
+    public ResourceBean(String type) {
         this.type = type;
     }
 
-    public ResourceBean(String name, String path, String type, int id, String size) {
-        this.name = name;
-        this.path = path;
+    public ResourceBean(String type, String fingerprint) {
+        this.fingerprint = fingerprint;
         this.type = type;
-        this.id = id;
+    }
+
+    public ResourceBean(String name, String fingerprint, String type, int id, String size) {
+        this.name = name;
+        this.fingerprint = fingerprint;
+        this.type = type;
         this.size = size;
+        this.id = id;
     }
 
     public String getSize() {
@@ -37,12 +42,12 @@ public class ResourceBean {
         this.size = size;
     }
 
-    public String getPath() {
-        return path;
+    public String getFingerprint() {
+        return fingerprint;
     }
 
-    public void setPath(String path) {
-        this.path = path;
+    public void setFingerprint(String fingerprint) {
+        this.fingerprint = fingerprint;
     }
 
     public int getId() {
@@ -52,7 +57,6 @@ public class ResourceBean {
     public void setId(int id) {
         this.id = id;
     }
-
     public String getName() {
         return name;
     }
@@ -70,7 +74,7 @@ public class ResourceBean {
     }
 
     /*
-        playNew,
+        playLocal,
         playTv,
         playSeek,
 
@@ -84,24 +88,26 @@ public class ResourceBean {
         switch (action){
             case list:
                 String encode_path = new String("");
-                try {
-                    encode_path = URLEncoder.encode(path, "UTF-8");
-                } catch (UnsupportedEncodingException e) {
-                    e.printStackTrace();
+                if(fingerprint != null) {
+                    try {
+                        encode_path = URLEncoder.encode(fingerprint, "UTF-8");
+                    } catch (UnsupportedEncodingException e) {
+                        e.printStackTrace();
+                    }
                 }
-                paramStr = "&type=" + type + "&path=" + encode_path;
+                paramStr = "&type=" + type + "&fingerprint=" + encode_path;
                 break;
             case playTv:
-                paramStr = "&id=" + id;
+                paramStr = "&fingerprint=" + fingerprint + "&type=" + type;
                 break;
-            case playNew:
+            case playLocal:
                 encode_path = new String("");
                 try {
-                    encode_path = URLEncoder.encode(path, "UTF-8");
+                    encode_path = URLEncoder.encode(fingerprint, "UTF-8");
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
-                paramStr = "&path=" + encode_path;
+                paramStr = "&fingerprint=" + encode_path + "&type=" + type;
                 break;
             case playCur:
             case playSeek:
