@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:background="#33FFC0CB">
         <TextView
-            android:id="@+id/file_item_num"
+            android:id="@+id/resource_item_num"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
@@ -24,18 +24,18 @@
             android:textSize="24sp"
             android:textStyle="bold"/>
         <ImageView
-            android:id="@+id/file_item_icon"
+            android:id="@+id/resource_item_icon"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_centerVertical="true"
-            android:layout_toRightOf="@id/file_item_num"
+            android:layout_toRightOf="@id/resource_item_num"
             android:layout_marginLeft="6dp"
             android:src="@mipmap/ic_launcher"/>
         <TextView
-            android:id="@+id/file_item_name"
+            android:id="@+id/resource_item_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_toRightOf="@id/file_item_icon"
+            android:layout_toRightOf="@id/resource_item_icon"
             android:layout_marginLeft="20dp"
             android:layout_centerVertical="true"
             android:text="阿凡达.mkv"

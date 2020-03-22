@@ -1,10 +1,8 @@
-package com.example.zhang.remoteos.beans;
-
-import android.util.Log;
+package com.example.zhang.remoteos.beans.responsebean;
 
 import com.example.zhang.remoteos.utils.ROSUtils;
 
-public class MediaStatusBean {
+public class MediaStatusResponseBean extends ResponseBaseBean{
     private String uuid;
     private String status;
     private String name;

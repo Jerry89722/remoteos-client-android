@@ -10,57 +10,65 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.zhang.remoteos.R;
-import com.example.zhang.remoteos.beans.ResourceBean;
+import com.example.zhang.remoteos.beans.ResourceBaseBean;
 
 import java.util.List;
 
-public class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder> {
+public class ResourceAdapter extends RecyclerView.Adapter<ResourceAdapter.ResourceViewHolder> {
 
-    Context context;
-    List<ResourceBean> mDatas;
+    private Context context;
+    private List<ResourceBaseBean> mDatas;
 
-    OnItemClickListener onItemClickListener;
+    private OnItemClickListener onItemClickListener;
 
     public interface OnItemClickListener {
-        public void onItemClick(View view, int i);
+        void onItemClick(View view, int i);
     }
 
     public void setOnItemClickListener(OnItemClickListener onItemClickListener){
         this.onItemClickListener = onItemClickListener;
     }
 
-    public FileAdapter(Context context, List<ResourceBean> mDatas) {
+    public ResourceAdapter(Context context, List<ResourceBaseBean> mDatas) {
         this.context = context;
         this.mDatas = mDatas;
     }
 
     @NonNull
     @Override
-    public FileViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
-        View view = LayoutInflater.from(context).inflate(R.layout.file_list_item_content, viewGroup,false);
-        FileViewHolder holder = new FileViewHolder(view);
-        return holder;
+    public ResourceViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
+        View view = LayoutInflater.from(context).inflate(R.layout.resource_list_item_content, viewGroup,false);
+        return new ResourceViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull FileViewHolder resourceViewHolder, final int i) {
-        ResourceBean resourceBean = mDatas.get(i);
+    public void onBindViewHolder(@NonNull ResourceViewHolder resourceViewHolder, final int i) {
+        ResourceBaseBean resourceBean = mDatas.get(i);
 
-        resourceViewHolder.idTv.setText("" + resourceBean.getId());
+        resourceViewHolder.idTv.setText(String.valueOf(resourceBean.getId()));
         resourceViewHolder.nameTv.setText(resourceBean.getName());
 
         switch (resourceBean.getType()) {
+            case "file":
+                resourceViewHolder.iconIv.setImageResource(R.mipmap.ic_file);
+                break;
             case "video":
                 resourceViewHolder.iconIv.setImageResource(R.mipmap.ic_video);
                 break;
             case "dir":
                 resourceViewHolder.iconIv.setImageResource(R.mipmap.ic_dir);
                 break;
-            case "music":
+            case "audio":
                 resourceViewHolder.iconIv.setImageResource(R.mipmap.ic_music);
                 break;
             case "tv":
                 resourceViewHolder.iconIv.setImageResource(R.mipmap.icon_tv);
+                break;
+            case "onlineVideo":
+                resourceViewHolder.iconIv.setImageResource(R.mipmap.icon_online);
+                break;
+            case "onlineSearch":
+                resourceViewHolder.iconIv.setImageResource(R.mipmap.icon_search);
                 break;
             default:
                 resourceViewHolder.iconIv.setImageResource(R.mipmap.ic_launcher);
@@ -79,15 +87,15 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder
         return mDatas.size();
     }
 
-    class FileViewHolder extends RecyclerView.ViewHolder{
+    class ResourceViewHolder extends RecyclerView.ViewHolder{
 
         TextView idTv, nameTv;
         ImageView iconIv;
-        public FileViewHolder(@NonNull View itemView) {
+        ResourceViewHolder(@NonNull View itemView) {
             super(itemView);
-            idTv = itemView.findViewById(R.id.file_item_num);
-            nameTv = itemView.findViewById(R.id.file_item_name);
-            iconIv = itemView.findViewById(R.id.file_item_icon);
+            idTv = itemView.findViewById(R.id.resource_item_num);
+            nameTv = itemView.findViewById(R.id.resource_item_name);
+            iconIv = itemView.findViewById(R.id.resource_item_icon);
         }
     }
 }

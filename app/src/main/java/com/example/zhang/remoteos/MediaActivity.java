@@ -20,30 +20,27 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import com.example.zhang.remoteos.apps.media.PlayActionEnum;
-import com.example.zhang.remoteos.adapters.FileAdapter;
-import com.example.zhang.remoteos.beans.MediaStatusBean;
-import com.example.zhang.remoteos.beans.ResourceBean;
-import com.example.zhang.remoteos.beans.ResourceListBean;
+import com.example.zhang.remoteos.apps.media.BaseMedia;
+import com.example.zhang.remoteos.apps.media.LocalMedia;
+import com.example.zhang.remoteos.apps.media.OnlineVideo;
+import com.example.zhang.remoteos.apps.media.Television;
+import com.example.zhang.remoteos.beans.requestbean.PlayerRequestBean;
+import com.example.zhang.remoteos.beans.requestbean.RequestBaseBean;
+import com.example.zhang.remoteos.beans.responsebean.MediaStatusResponseBean;
+import com.example.zhang.remoteos.beans.requestbean.SearchRequestBean;
+import com.example.zhang.remoteos.utils.PlayActionEnum;
 import com.example.zhang.remoteos.utils.ROSUtils;
-import com.example.zhang.remoteos.beans.TaskBean;
-import com.example.zhang.remoteos.utils.okhttputils.CallBackUtil;
-import com.example.zhang.remoteos.utils.okhttputils.OkhttpUtil;
-import com.hjq.bar.TitleBar;
 
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import okhttp3.Call;
 
 public class MediaActivity extends Activity {
 
@@ -144,20 +141,16 @@ public class MediaActivity extends Activity {
          */
         private static final String ARG_SECTION_NUMBER = "section_number";
 
+        BaseMedia media;
 
-        TextView name_tv, cur_time_tv, total_time_tv;
-        ImageView next_iv, last_iv, play_iv, stop_iv, mute_iv, low_iv, high_iv, touch_line_iv;
-        SeekBar seekBar;
+        TextView titleBar;
+
+        EditText et_keyword;
+        Button btn_search;
+
+        MediaBoarder mediaBoarder;
+
         RecyclerView list_rv;
-        List<ResourceBean> mResources;
-        String curPath = "/";
-
-        ResourceBean playingResourceBean;
-
-        private FileAdapter adapter;
-
-        Timer timer;
-        TimerTask task;
 
         public PlaceholderFragment() {
         }
@@ -179,332 +172,194 @@ public class MediaActivity extends Activity {
                                  Bundle savedInstanceState) {
 
             View rootView = inflater.inflate(R.layout.fragment_media, container, false);
-            TitleBar titleBar = rootView.findViewById(R.id.section_label);
-
-            mResources = new ArrayList<>();
-            playingResourceBean = new ResourceBean();
-
             initView(rootView);
-            adapter = new FileAdapter(this.getActivity(), mResources);
-            list_rv.setAdapter(adapter);
-            list_rv.setLayoutManager(new LinearLayoutManager(this.getActivity(), LinearLayoutManager.VERTICAL, false));
 
             String title;
-            ResourceBean resourceBean;
-            if (getArguments().getInt(ARG_SECTION_NUMBER) == 1){
+            if (getArguments().getInt(ARG_SECTION_NUMBER) == 1) {
                 title = "电视";
-                resourceBean = new ResourceBean("tv");
-
-            }else{
+                media = new Television(this.getActivity());
+            } else if (getArguments().getInt(ARG_SECTION_NUMBER) == 2) {
+                title = "网络视频";
+                media = new OnlineVideo(this.getActivity());
+            } else {
                 title = "本地媒体";
-                resourceBean = new ResourceBean("video/music", curPath);
+                media = new LocalMedia(this.getActivity());
             }
-            playingMediaRestore();
 
-            listLoad(resourceBean);
+            list_rv.setAdapter(media.getAdapter());
+            list_rv.setLayoutManager(new LinearLayoutManager(this.getActivity(), LinearLayoutManager.VERTICAL, false));
+            media.listRequest(null);
 
-            titleBar.setTitle(title);
+            media.playerStatusRequest();
 
-            setEventListener();
+            media.setMediaBoarderNotifier(new BaseMedia.MediaBoarderNotifier() {
+                @Override
+                public void notifyMediaStatusChanged(MediaStatusResponseBean mediaStatusBean) {
+                    mediaBoarder.update(mediaStatusBean);
+                }
+            });
+
+            titleBar.setText(title);
+
             return rootView;
         }
 
-        private void playingMediaRestore() {
-            mediaPlayerCtrl(playingResourceBean, PlayActionEnum.statusCheck, 0);
+        private void initView(View view) {
+            et_keyword = view.findViewById(R.id.et_kw);
+            btn_search = view.findViewById(R.id.search_btn);
+            mediaBoarder = new MediaBoarder(view);
+            titleBar = view.findViewById(R.id.section_label);
+            list_rv = view.findViewById(R.id.rv);
+            btn_search.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    String keyword = et_keyword.getText().toString();
+                    Log.e("search kw", keyword);
+                    media.searchRequest(new SearchRequestBean(keyword));
+                }
+            });
         }
 
         public boolean lastPage(){
-            Log.e("current path", curPath);
-
-            if(curPath.equals("/")) {
-                return false;
-            }else {
-
-                if(curPath.charAt(curPath.length() - 1) == '/') {
-                    curPath = curPath.substring(0, curPath.lastIndexOf('/', curPath.length()-2)+1);
-                }else{
-                    curPath = curPath.substring(0, curPath.lastIndexOf('/') + 1);
-                }
-                Log.e("current path2", curPath);
-
-                ResourceBean resourceBean = new ResourceBean("video/music", curPath);
-                listLoad(resourceBean);
-                return true;
-            }
+            Log.e("last page", "... ...");
+            return media.goBack();
         }
 
-        private void setEventListener() {
-            /* 设置每一项的点击事件*/
-            adapter.setOnItemClickListener(new FileAdapter.OnItemClickListener() {
-                @Override
-                public void onItemClick(View view, int i) {
+        class MediaBoarder implements View.OnClickListener{
+            TextView name_tv, cur_time_tv, total_time_tv;
+            ImageView next_iv, last_iv, play_iv, stop_iv, mute_iv, low_iv, high_iv, touch_line_iv;
+            SeekBar seekBar;
 
-                    ResourceBean resourceBean = mResources.get(i);
-                    Log.e("list clicked, position", "" + i);
-                    itemClicked(resourceBean);
-                }
-            });
-        }
+            Timer timer;
+            TimerTask task;
 
-        private void listLoad(final ResourceBean resourceBean) {
+            MediaBoarder(View view) {
+                name_tv = view.findViewById(R.id.tv_name);
+                cur_time_tv = view.findViewById(R.id.tv_cur_time);
+                total_time_tv = view.findViewById(R.id.tv_total_time);
+                next_iv = view.findViewById(R.id.iv_next);
+                last_iv = view.findViewById(R.id.iv_last);
+                play_iv = view.findViewById(R.id.iv_play);
+                touch_line_iv = view.findViewById(R.id.iv_touch_line);
+                seekBar = view.findViewById(R.id.seek_bar);
+                stop_iv = view.findViewById(R.id.iv_stop);
+                mute_iv = view.findViewById(R.id.iv_mute);
+                low_iv = view.findViewById(R.id.vol_low);
+                high_iv = view.findViewById(R.id.vol_high);
+                seekBar.setEnabled(false);
+                timer = new Timer();
 
-            TaskBean task = new TaskBean(PlayActionEnum.list, resourceBean);
-            String url = task.toString();
-            try {
-                url = new String(url.getBytes("ISO-8859-1"),"UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
-            String address = addressGet(resourceBean);
+                seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                    int progress;
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                        cur_time_tv.setText(ROSUtils.secToTime(i));
+                        progress = i;
+                    }
 
-            url = address + url;
-            Log.e("list load url: ", url);
-            // public static void okHttpGet(String url, Map<String, String> paramsMap, Map<String, String> headerMap, CallBackUtil callBack)
-            OkhttpUtil.okHttpGet(url, null, null, new CallBackUtil.CallBackString() {
-                @Override
-                public void onFailure(Call call, Exception e) {}
-
-                @Override
-                public void onResponse(String response) {
-                    // Toast.makeText(MediaActivity.this, "Success", Toast.LENGTH_SHORT).show();
-                    Log.d("list load response", response);
-                    mResources.clear();
-                    JSONObject jsonObject = JSON.parseObject(response);
-                    ResourceListBean resourceListBean = JSON.toJavaObject(jsonObject, ResourceListBean.class);
-//                        String uuid = fileListBean.getUuid();
-                    List<ResourceBean> resourceList = resourceListBean.getList();
-                    for(int i = 0; i < resourceList.size(); ++i){
-                        ResourceBean resourceBean = resourceList.get(i);
-                        if(!resourceBean.getType().equals("tv")){
-                            resourceBean.setId(i + 1);
+                    @Override
+                    public void onStartTrackingTouch(SeekBar seekBar) {
+                        if(task != null){
+                            task.cancel();
                         }
-                        mResources.add(resourceBean);
                     }
-                    adapter.notifyDataSetChanged();
-                }
-            });
-        }
 
-        private String addressGet(ResourceBean resourceBean) {
-            String base_url = getResources().getString(R.string.base_url);
-            String atype;
-
-            if(resourceBean.getType().equals("tv")){
-                atype = "tv";
-            }else if(resourceBean.getType().contains("video") ||
-                    resourceBean.getType().contains("music") ||
-                    resourceBean.getType().contains("dir")){
-                atype = "files";
-            }else{
-                atype = "internet";
-            }
-            return String.format(base_url, "toshiba", "explorer/" + atype);
-        }
-
-        private void itemClicked(final ResourceBean resourceBean){
-            if(resourceBean.getType().equals("dir")){
-                curPath = curPath + resourceBean.getName() + "/";
-                Log.e("next current path", curPath);
-                resourceBean.setFingerprint(curPath);
-                listLoad(resourceBean);
-            }else{
-                playingResourceBean = resourceBean;
-                if(getArguments().getInt(PlaceholderFragment.ARG_SECTION_NUMBER) == 1){
-//                    playingResourceBean.setFingerprint(curPath + resourceBean.getName());
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playTv, 0);
-                }else{
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playLocal, 0);
-                }
-            }
-        }
-
-        private void mediaPlayerCtrl(final ResourceBean resourceBean, final PlayActionEnum action, final int arg){
-            TaskBean task = new TaskBean(action, resourceBean, arg);
-            String url = task.toString();
-            try {
-                url = new String(url.getBytes("ISO-8859-1"),"UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
-            String base_url = getResources().getString(R.string.base_url);
-            url = String.format(base_url, "toshiba", "media" + url);
-
-            Log.e("media player url", url);
-
-//          public static void okHttpGet(String url, Map<String, String> paramsMap, Map<String, String> headerMap, CallBackUtil callBack)
-            OkhttpUtil.okHttpGet(url, null, null, new CallBackUtil.CallBackString() {
-                @Override
-                public void onFailure(Call call, Exception e) {}
-
-                @Override
-                public void onResponse(String response) {
-//                  Toast.makeText(MediaActivity.this, "Success", Toast.LENGTH_SHORT).show();
-                    Log.e("media player response", response);
-                    JSONObject jsonObject = JSON.parseObject(response);
-                    MediaStatusBean playStatusBean = JSON.toJavaObject(jsonObject, MediaStatusBean.class);
-
-                    playerBoarderUpdate(playStatusBean);
-
-                    switch (playStatusBean.getStatus()) {
-                        case "playing":
-                            play_iv.setImageResource(R.mipmap.icon_pause);
-                            break;
-                        case "pause":
-                        case "stop":
-                            play_iv.setImageResource(R.mipmap.icon_play);
-                            break;
+                    @Override
+                    public void onStopTrackingTouch(SeekBar seekBar) {
+                        media.mediaCtrlRequest(new PlayerRequestBean(PlayActionEnum.playSeek, progress));
+                        timerTaskStart();
                     }
-                }
-            });
-        }
+                });
 
-        private void playerBoarderUpdate(MediaStatusBean playStatusBean) {
-
-            Log.e("cur_time", "|" + playStatusBean.getCur_time());
-            Log.e("total_time", "|" + playStatusBean.getTotal_time());
-            cur_time_tv.setText(playStatusBean.getCur_time());
-            total_time_tv.setText(playStatusBean.getTotal_time());
-
-            seekBar.setMax((int) playStatusBean.getTimeAsSec(true));
-            seekBar.setProgress((int)playStatusBean.getTimeAsSec(false));
-
-            if(playStatusBean.getName().length() > 0){
-                String name = playStatusBean.getName();
-                name_tv.setText(name);
-                playingResourceBean.setName(name);
+                next_iv.setOnClickListener(this);
+                last_iv.setOnClickListener(this);
+                play_iv.setOnClickListener(this);
+                stop_iv.setOnClickListener(this);
+                mute_iv.setOnClickListener(this);
+                low_iv.setOnClickListener(this);
+                high_iv.setOnClickListener(this);
+                touch_line_iv.setOnClickListener(this);
             }
-        }
 
-        private void initView(View view) {
-            name_tv = view.findViewById(R.id.tv_name);
-            cur_time_tv = view.findViewById(R.id.tv_cur_time);
-            total_time_tv = view.findViewById(R.id.tv_total_time);
-            next_iv = view.findViewById(R.id.iv_next);
-            last_iv = view.findViewById(R.id.iv_last);
-            play_iv = view.findViewById(R.id.iv_play);
-            touch_line_iv = view.findViewById(R.id.iv_touch_line);
-            seekBar = view.findViewById(R.id.seek_bar);
-            list_rv = view.findViewById(R.id.rv);
-            stop_iv = view.findViewById(R.id.iv_stop);
-            mute_iv = view.findViewById(R.id.iv_mute);
-            low_iv = view.findViewById(R.id.vol_low);
-            high_iv = view.findViewById(R.id.vol_high);
-
-            seekBar.setEnabled(false);
-
-//            next_iv.setOnClickListener((View.OnClickListener) view);
-//            last_iv.setOnClickListener(this);
-
-            stop_iv.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playStop, 0);
+            void timerTaskStart(){
+                if(task != null){
+                    task.cancel();
                 }
-            });
-
-            mute_iv.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.volMute, 0);
-                }
-            });
-
-            low_iv.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.volLow, -8);
-                }
-            });
-
-            high_iv.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.volHigh, 8);
-                }
-            });
-
-            play_iv.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    Log.e("click", "enable seek_bar ......");
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playCur, 0);
-                }
-            });
-            touch_line_iv.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    Log.e("click", "enable seek_bar ......");
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.statusCheck, 0);
-                    seekBar.setEnabled(true);
-                    timerTaskStart();
-                }
-            });
-
-            timer = new Timer();
-            seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                int progress;
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                    cur_time_tv.setText(ROSUtils.secToTime(i));
-                    progress = i;
-                }
-
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
-                    if(task != null){
-                        task.cancel();
+                task = new TimerTask() {
+                    @Override
+                    public void run() {
+                        Handler handler = new Handler(Looper.getMainLooper()) {
+                            @Override
+                            public void handleMessage(Message msg) {
+                                seekBar.setEnabled(false);
+                            }
+                        };
+                        handler.sendEmptyMessage(0);
                     }
-                }
-
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
-                    mediaPlayerCtrl(playingResourceBean, PlayActionEnum.playSeek, progress);
-                    timerTaskStart();
-                }
-            });
-        }
-
-        void timerTaskStart(){
-            if(task != null){
-                task.cancel();
+                };
+                timer.schedule(task, 2000);
             }
-            task = new TimerTask() {
-                @Override
-                public void run() {
-                    Handler handler = new Handler(Looper.getMainLooper()) {
-                        @Override
-                        public void handleMessage(Message msg) {
-                            seekBar.setEnabled(false);
-                        }
-                    };
-                    handler.sendEmptyMessage(0);
-                }
-            };
-            timer.schedule(task, 2000);
-        }
 
-//        @Override
-//        public void onClick(View view) {
-//            switch (view.getId()){
-//                case R.id.iv_next:
-//                    Log.e("click", "next ......");
-//                    break;
-//                case R.id.iv_last:
-//                    Log.e("click", "last ......");
-//                    break;
-//                case R.id.iv_play:
-//                    mediaPlayerCtrl(playingFileBean, PlayActionEnum.playCur, -1);
-//                    break;
-//                case R.id.iv_touch_line:
-//                    Log.e("click", "enable seek_bar ......");
-//                    mediaPlayerCtrl(playingFileBean, PlayActionEnum.statusCheck, -1);
-//                    seekBar.setEnabled(true);
-//                    timerTaskStart();
-//                    break;
-//            }
-//        }
+            public void update(MediaStatusResponseBean mediaStatus){
+                Log.d("cur_time", "|" + mediaStatus.getCur_time());
+                Log.d("total_time", "|" + mediaStatus.getTotal_time());
+                cur_time_tv.setText(mediaStatus.getCur_time());
+                total_time_tv.setText(mediaStatus.getTotal_time());
+
+                seekBar.setMax((int) mediaStatus.getTimeAsSec(true));
+                seekBar.setProgress((int) mediaStatus.getTimeAsSec(false));
+
+                if (mediaStatus.getName().length() > 0) {
+                    String name = mediaStatus.getName();
+                    name_tv.setText(name);
+                }
+                if(mediaStatus.getStatus().equals("playing")){
+                    play_iv.setImageResource(R.mipmap.icon_play);
+                }else {
+                    play_iv.setImageResource(R.mipmap.icon_pause);
+                }
+            }
+
+            @Override
+            public void onClick(View view) {
+                switch (view.getId()){
+                    case R.id.iv_play:
+                        Log.e("play button",  "clicked ... ");
+                        media.mediaCtrlRequest(new RequestBaseBean(PlayActionEnum.playCur));
+                        break;
+                    case R.id.iv_stop:
+                        Log.e("stop button",  "clicked ... ");
+                        media.mediaCtrlRequest(new RequestBaseBean(PlayActionEnum.playStop));
+                        break;
+                    case R.id.iv_next:
+                        Log.e("next button",  "clicked ... ");
+//                        media.mediaCtrlRequest(new RequestBaseBean(PlayActionEnum.));
+                        break;
+                    case R.id.iv_last:
+                        Log.e("last button",  "clicked ... ");
+                        break;
+                    case R.id.iv_mute:
+                        Log.e("mute button",  "clicked ... ");
+                        media.mediaCtrlRequest(new PlayerRequestBean(PlayActionEnum.volMute, 0));
+                        break;
+                    case R.id.vol_low:
+                        Log.e("volume low button",  "clicked ... ");
+                        media.mediaCtrlRequest(new PlayerRequestBean(PlayActionEnum.volLow, -5));
+                        break;
+                    case R.id.vol_high:
+                        Log.e("volume high button",  "clicked ... ");
+                        media.mediaCtrlRequest(new PlayerRequestBean(PlayActionEnum.volHigh, 5));
+                        break;
+                    case R.id.iv_touch_line:
+                        Log.e("touch line button",  "clicked ... ");
+                        media.mediaCtrlRequest(new RequestBaseBean(PlayActionEnum.statusCheck));
+                        seekBar.setEnabled(true);
+                        timerTaskStart();
+                        break;
+                }
+            }
+        }
     }
-
     /***************************************************************************
      * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
      * one of the sections/tabs/pages.
@@ -532,8 +387,8 @@ public class MediaActivity extends Activity {
 
         @Override
         public int getCount() {
-            // Show 2 total pages.
-            return 2;
+            // Show 3 total pages.
+            return 3;
         }
 
         @Override
@@ -543,6 +398,8 @@ public class MediaActivity extends Activity {
                     return "SECTION 1";
                 case 1:
                     return "SECTION 2";
+                case 2:
+                    return "SECTION 3";
             }
             return null;
         }

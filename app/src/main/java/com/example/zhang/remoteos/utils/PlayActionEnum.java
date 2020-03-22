@@ -1,4 +1,4 @@
-package com.example.zhang.remoteos.apps.media;
+package com.example.zhang.remoteos.utils;
 
 public enum PlayActionEnum{
     playLocal,
@@ -10,5 +10,9 @@ public enum PlayActionEnum{
     volMute,
     volHigh,
     volLow,
+    search,
+    info,
+    playInternet,
     list
 }
+
