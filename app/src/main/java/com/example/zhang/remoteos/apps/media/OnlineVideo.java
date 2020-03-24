@@ -2,6 +2,7 @@ package com.example.zhang.remoteos.apps.media;
 
 import android.app.Activity;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.example.zhang.remoteos.beans.requestbean.SearchRequestBean;
 import com.example.zhang.remoteos.beans.ResourceBaseBean;
@@ -17,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class OnlineVideo extends BaseMedia {
-    String current;
+    private String current;
     public OnlineVideo(Activity activity) {
         super(activity);
         current = "onlineSearch";
@@ -93,19 +94,28 @@ public class OnlineVideo extends BaseMedia {
 
     @Override
     public void searchListHandle(ResponseBaseBean responseBean) {
-        if(responseBean == null)
+        if(responseBean == null) {
+            Toast.makeText(this.activity, "无结果", Toast.LENGTH_LONG).show();
             return;
+        }
         SearchResponseBean searchResponseBean = (SearchResponseBean) responseBean;
         List<ResourceBaseBean> resourceList = new ArrayList<>();
 
         for(int i= 0; i < searchResponseBean.getTitles().size(); ++i){
             // int id, String image_src, String type, String fingerprint, String name
+            String fullName;
+            if (searchResponseBean.getStatus().get(i).equals("none")){
+                fullName = searchResponseBean.getTitles().get(i);
+            }else {
+                fullName = searchResponseBean.getTitles().get(i) + "-" + searchResponseBean.getStatus().get(i);
+            }
+
             ResourceBaseBean resourceBaseBean = new ResourceBaseBean(
                     i + 1,
                     searchResponseBean.getCovers().get(i),
                     "onlineSearch",
                     String.valueOf(i),
-                    searchResponseBean.getTitles().get(i) + "-" + searchResponseBean.getStatus().get(i));
+                    fullName);
             resourceList.add(resourceBaseBean);
         }
 

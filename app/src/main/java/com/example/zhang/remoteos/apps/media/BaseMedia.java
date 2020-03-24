@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.View;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
 import com.example.zhang.remoteos.R;
 import com.example.zhang.remoteos.adapters.ResourceAdapter;
@@ -24,7 +25,7 @@ import java.util.List;
 import okhttp3.Call;
 
 public abstract class BaseMedia {
-    private Activity activity;
+    Activity activity;
     private ResourceAdapter adapter;
     List<ResourceBaseBean> mResources;
     private MediaBoarderNotifier mediaBoarderNotifier;
@@ -58,7 +59,7 @@ public abstract class BaseMedia {
     /**
      *   用于将获取到的数据处理为媒体播放状态数据
      * */
-    public MediaStatusResponseBean mediaStatusHandle(ResponseBaseBean responseBean){
+    private MediaStatusResponseBean mediaStatusHandle(ResponseBaseBean responseBean){
         return (MediaStatusResponseBean) responseBean;
     }
 
@@ -106,7 +107,13 @@ public abstract class BaseMedia {
      *   @param clazz 必须是ResponseBaseBean的子类
      * */
     private <T> ResponseBaseBean responseParse(String response, Class<T> clazz){
-        JSONObject jsonObject = JSON.parseObject(response);
+        JSONObject jsonObject;
+        try {
+            jsonObject = JSON.parseObject(response);
+        }catch (JSONException ex){
+            return null;
+        }
+
         return (ResponseBaseBean) JSON.toJavaObject(jsonObject, clazz);
     }
 
@@ -193,7 +200,9 @@ public abstract class BaseMedia {
 
         OkhttpUtil.okHttpGet(url, null, null, new CallBackUtil.CallBackString() {
             @Override
-            public void onFailure(Call call, Exception e) {}
+            public void onFailure(Call call, Exception e) {
+                Log.e("failed", "http request failed");
+            }
 
             @Override
             public void onResponse(String response) {
